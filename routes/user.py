@@ -44,6 +44,20 @@ education_model = user_ns.model('Education', {
     'endDate': fields.String(required=True, description='졸업일 (YYYY-MM-DD)')
 })
 
+profile_model = user_ns.model('Profile', {
+    'name': fields.String(description='이름'),
+    'email': fields.String(description='이메일'),
+    'phone': fields.String(description='전화번호'),
+    'introduction': fields.String(description='자기소개'),
+    'portfolio': fields.String(description='포트폴리오 URL'),
+    'blog': fields.String(description='블로그 URL'),
+    'github': fields.String(description='GitHub URL')
+})
+
+skill_model = user_ns.model('Skill', {
+    'name': fields.String(required=True, description='기술 스택 이름')
+})
+
 resume_model = user_ns.model('Resume', {
     'name': fields.String(required=True, description='이름'),
     'email': fields.String(required=True, description='이메일'),
@@ -59,128 +73,169 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in current_app.config['ALLOWED_EXTENSIONS']
 
-@user_bp.route('/profile', methods=['GET'])
-@jwt_required()
-def get_profile():
-    user_id = get_jwt_identity()
-    user = User.query.get_or_404(user_id)
-    
-    work_experiences = WorkExperience.query.filter_by(user_id=user_id).all()
-    projects = Project.query.filter_by(user_id=user_id).all()
-    education = Education.query.filter_by(user_id=user_id).all()
-    
-    return jsonify({
-        'user': {
-            'id': user.id,
-            'email': user.email,
-            'name': user.name,
-            'introduction': user.introduction,
-            'phone': user.phone,
-            'self_introduction': user.self_introduction,
-            'portfolio': user.portfolio,
-            'blog': user.blog,
-            'github': user.github
-        },
-        'work_experiences': [{
-            'id': exp.id,
-            'company': exp.company,
-            'department': exp.department,
-            'position': exp.position,
-            'is_current': exp.is_current,
-            'description': exp.description,
-            'start_date': exp.start_date.isoformat() if exp.start_date else None,
-            'end_date': exp.end_date.isoformat() if exp.end_date else None
-        } for exp in work_experiences],
-        'projects': [{
-            'id': proj.id,
-            'name': proj.name,
-            'organization': proj.organization,
-            'period': proj.period,
-            'description': proj.description,
-            'image_url': proj.image_url,
-            'is_representative': proj.is_representative
-        } for proj in projects],
-        'education': [{
-            'id': edu.id,
-            'university': edu.university,
-            'major': edu.major,
-            'period': edu.period,
-            'description': edu.description
-        } for edu in education]
-    }), 200
+@user_ns.route('/profile')
+class Profile(Resource):
+    @jwt_required()
+    @user_ns.doc('프로필 조회',
+             description='사용자의 프로필 정보를 조회합니다.',
+             responses={
+                 200: '프로필 조회 성공',
+                 401: '인증 실패',
+                 404: '사용자를 찾을 수 없음'
+             })
+    def get(self):
+        """사용자의 프로필 정보를 조회합니다."""
+        user_id = get_jwt_identity()
+        user = User.query.get_or_404(user_id)
+        
+        work_experiences = WorkExperience.query.filter_by(user_id=user_id).all()
+        projects = Project.query.filter_by(user_id=user_id).all()
+        education = Education.query.filter_by(user_id=user_id).all()
+        
+        return {
+            'user': {
+                'id': user.id,
+                'email': user.email,
+                'name': user.name,
+                'introduction': user.introduction,
+                'phone': user.phone,
+                'portfolio': user.portfolio,
+                'blog': user.blog,
+                'github': user.github
+            },
+            'work_experiences': [{
+                'id': exp.id,
+                'company': exp.company,
+                'position': exp.position,
+                'start_date': exp.start_date.isoformat() if exp.start_date else None,
+                'end_date': exp.end_date.isoformat() if exp.end_date else None,
+                'description': exp.description
+            } for exp in work_experiences],
+            'projects': [{
+                'id': proj.id,
+                'title': proj.title,
+                'description': proj.description,
+                'start_date': proj.start_date.isoformat() if proj.start_date else None,
+                'end_date': proj.end_date.isoformat() if proj.end_date else None,
+                'tech_stack': proj.tech_stack
+            } for proj in projects],
+            'education': [{
+                'id': edu.id,
+                'school': edu.school,
+                'major': edu.major,
+                'degree': edu.degree,
+                'start_date': edu.start_date.isoformat() if edu.start_date else None,
+                'end_date': edu.end_date.isoformat() if edu.end_date else None
+            } for edu in education]
+        }
 
-@user_bp.route('/profile', methods=['PUT'])
-@jwt_required()
-def update_profile():
-    user_id = get_jwt_identity()
-    user = User.query.get_or_404(user_id)
-    data = request.get_json()
-    
-    for key, value in data.items():
-        if hasattr(user, key):
-            setattr(user, key, value)
-    
-    db.session.commit()
-    return jsonify({'message': '프로필이 업데이트되었습니다.'}), 200
+    @jwt_required()
+    @user_ns.doc('프로필 수정',
+             description='사용자의 프로필 정보를 수정합니다.',
+             responses={
+                 200: '프로필 수정 성공',
+                 401: '인증 실패',
+                 404: '사용자를 찾을 수 없음'
+             })
+    @user_ns.expect(profile_model)
+    def put(self):
+        """사용자의 프로필 정보를 수정합니다."""
+        user_id = get_jwt_identity()
+        user = User.query.get_or_404(user_id)
+        data = request.get_json()
+        
+        for key, value in data.items():
+            if hasattr(user, key):
+                setattr(user, key, value)
+        
+        db.session.commit()
+        return {'message': '프로필이 업데이트되었습니다.'}, 200
 
-@user_bp.route('/work-experience', methods=['POST'])
-@jwt_required()
-def add_work_experience():
-    user_id = get_jwt_identity()
-    data = request.get_json()
-    
-    new_experience = WorkExperience(
-        user_id=user_id,
-        company=data['company'],
-        department=data.get('department'),
-        position=data.get('position'),
-        is_current=data.get('is_current', False),
-        description=data.get('description'),
-        start_date=data.get('start_date'),
-        end_date=data.get('end_date')
-    )
-    
-    db.session.add(new_experience)
-    db.session.commit()
-    
-    return jsonify({'message': '경력이 추가되었습니다.'}), 201
+@user_ns.route('/work-experience')
+class WorkExperienceResource(Resource):
+    @jwt_required()
+    @user_ns.doc('경력 추가',
+             description='새로운 경력 사항을 추가합니다.',
+             responses={
+                 201: '경력 추가 성공',
+                 401: '인증 실패',
+                 400: '잘못된 요청'
+             })
+    @user_ns.expect(work_experience_model)
+    def post(self):
+        """새로운 경력 사항을 추가합니다."""
+        user_id = get_jwt_identity()
+        data = request.get_json()
+        
+        new_experience = WorkExperience(
+            user_id=user_id,
+            company=data['company'],
+            position=data['position'],
+            start_date=data['startDate'],
+            end_date=data['endDate'],
+            description=data.get('description', '')
+        )
+        
+        db.session.add(new_experience)
+        db.session.commit()
+        
+        return {'message': '경력이 추가되었습니다.'}, 201
 
-@user_bp.route('/project', methods=['POST'])
-@jwt_required()
-def add_project():
-    user_id = get_jwt_identity()
-    data = request.get_json()
-    
-    new_project = Project(
-        user_id=user_id,
-        name=data['name'],
-        organization=data.get('organization'),
-        period=data.get('period'),
-        description=data.get('description'),
-        image_url=data.get('image_url'),
-        is_representative=data.get('is_representative', False)
-    )
-    
-    db.session.add(new_project)
-    db.session.commit()
-    
-    return jsonify({'message': '프로젝트가 추가되었습니다.'}), 201
+@user_ns.route('/project')
+class ProjectResource(Resource):
+    @jwt_required()
+    @user_ns.doc('프로젝트 추가',
+             description='새로운 프로젝트를 추가합니다.',
+             responses={
+                 201: '프로젝트 추가 성공',
+                 401: '인증 실패',
+                 400: '잘못된 요청'
+             })
+    @user_ns.expect(project_model)
+    def post(self):
+        """새로운 프로젝트를 추가합니다."""
+        user_id = get_jwt_identity()
+        data = request.get_json()
+        
+        new_project = Project(
+            user_id=user_id,
+            title=data['title'],
+            description=data['description'],
+            start_date=data['startDate'],
+            end_date=data['endDate'],
+            tech_stack=data.get('techStack', [])
+        )
+        
+        db.session.add(new_project)
+        db.session.commit()
+        
+        return {'message': '프로젝트가 추가되었습니다.'}, 201
 
-@user_bp.route('/skill', methods=['POST'])
-@jwt_required()
-def add_skill():
-    user_id = get_jwt_identity()
-    data = request.get_json()
-    
-    new_skill = Skill(
-        user_id=user_id,
-        name=data['name']
-    )
-    
-    db.session.add(new_skill)
-    db.session.commit()
-    
-    return jsonify({'message': '기술 스택이 추가되었습니다.'}), 201
+@user_ns.route('/skill')
+class SkillResource(Resource):
+    @jwt_required()
+    @user_ns.doc('기술 스택 추가',
+             description='새로운 기술 스택을 추가합니다.',
+             responses={
+                 201: '기술 스택 추가 성공',
+                 401: '인증 실패',
+                 400: '잘못된 요청'
+             })
+    @user_ns.expect(skill_model)
+    def post(self):
+        """새로운 기술 스택을 추가합니다."""
+        user_id = get_jwt_identity()
+        data = request.get_json()
+        
+        new_skill = Skill(
+            user_id=user_id,
+            name=data['name']
+        )
+        
+        db.session.add(new_skill)
+        db.session.commit()
+        
+        return {'message': '기술 스택이 추가되었습니다.'}, 201
 
 @user_ns.route('/resume')
 class Resume(Resource):
