@@ -2,12 +2,27 @@ from flask import Blueprint, request, jsonify
 from models import User
 from extensions import db
 from flask_jwt_extended import create_access_token
-from flask_restx import Resource, Namespace
+from flask_restx import Resource, Namespace, fields
 import re
-from app import api, user_model, login_model, signup_model
 
 auth_bp = Blueprint('auth', __name__)
 auth_ns = Namespace('auth', description='인증 관련 API')
+
+# API 모델 정의
+login_model = auth_ns.model('Login', {
+    'email': fields.String(required=True, description='사용자 이메일'),
+    'password': fields.String(required=True, description='비밀번호')
+})
+
+signup_model = auth_ns.model('Signup', {
+    'email': fields.String(required=True, description='사용자 이메일'),
+    'password': fields.String(required=True, description='비밀번호'),
+    'name': fields.String(required=True, description='이름'),
+    'user_type': fields.String(required=True, description='사용자 유형 (student/company)'),
+    'skills': fields.List(fields.String, description='기술 스택 (학생인 경우)'),
+    'company_name': fields.String(description='회사명 (기업인 경우)'),
+    'company_description': fields.String(description='회사 소개 (기업인 경우)')
+})
 
 def validate_password(password):
     """비밀번호 유효성 검사"""
@@ -38,15 +53,11 @@ class Signup(Resource):
              - user_type: 사용자 타입 (필수, 'student' 또는 'company')
              
              student 타입일 경우 추가 필드:
-             - course: 수강 코스
-             - skills: 기술 스택 목록
-             - portfolio: 포트폴리오 URL
+             - skills: 기술 스택 목록 (필수)
              
              company 타입일 경우 추가 필드:
-             - company_name: 회사명
-             - industry: 산업 분야
-             - company_size: 회사 규모
-             - company_location: 회사 위치
+             - company_name: 회사명 (필수)
+             - company_description: 회사 소개 (필수)
              
              응답:
              201: 회원가입 성공
@@ -60,7 +71,7 @@ class Signup(Resource):
                  409: '이메일 중복',
                  500: '서버 오류'
              })
-    @api.expect(signup_model)
+    @auth_ns.expect(signup_model)
     def post(self):
         """새로운 사용자를 등록합니다."""
         try:
@@ -74,6 +85,10 @@ class Signup(Resource):
             # 이메일 중복 검사
             if User.query.filter_by(email=data['email']).first():
                 return {'error': 'Email already exists'}, 409
+            
+            # 비밀번호 유효성 검사
+            if not validate_password(data['password']):
+                return {'error': 'Password must be at least 8 characters long and contain letters, numbers, and special characters'}, 400
             
             # 사용자 유형별 추가 필드 검사
             if data['user_type'] == 'student':
@@ -119,7 +134,7 @@ class Login(Resource):
                  401: '인증 실패',
                  500: '서버 오류'
              })
-    @api.expect(login_model)
+    @auth_ns.expect(login_model)
     def post(self):
         """사용자 로그인을 처리합니다."""
         try:

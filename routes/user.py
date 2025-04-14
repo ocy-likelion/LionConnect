@@ -1,7 +1,8 @@
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from extensions import db, jwt
-from models import User, WorkExperience, Project, Education, Award, Certificate, Skill
+from extensions import db
+from models import User, WorkExperience, Project, Education, Skill
+from flask_restx import Resource, Namespace, fields
 import logging
 import traceback
 import json
@@ -10,8 +11,6 @@ import os
 import uuid
 from datetime import datetime
 import base64
-from flask_restx import Resource, Namespace
-from app import api, resume_model
 
 # 로깅 설정
 logging.basicConfig(level=logging.DEBUG)
@@ -19,6 +18,42 @@ logger = logging.getLogger(__name__)
 
 user_bp = Blueprint('user', __name__)
 user_ns = Namespace('user', description='사용자 관련 API')
+
+# API 모델 정의
+work_experience_model = user_ns.model('WorkExperience', {
+    'company': fields.String(required=True, description='회사명'),
+    'position': fields.String(required=True, description='직책'),
+    'startDate': fields.String(required=True, description='시작일 (YYYY-MM-DD)'),
+    'endDate': fields.String(required=True, description='종료일 (YYYY-MM-DD)'),
+    'description': fields.String(description='업무 설명')
+})
+
+project_model = user_ns.model('Project', {
+    'title': fields.String(required=True, description='프로젝트명'),
+    'description': fields.String(required=True, description='프로젝트 설명'),
+    'startDate': fields.String(required=True, description='시작일 (YYYY-MM-DD)'),
+    'endDate': fields.String(required=True, description='종료일 (YYYY-MM-DD)'),
+    'techStack': fields.List(fields.String, description='사용 기술')
+})
+
+education_model = user_ns.model('Education', {
+    'school': fields.String(required=True, description='학교명'),
+    'major': fields.String(required=True, description='전공'),
+    'degree': fields.String(required=True, description='학위'),
+    'startDate': fields.String(required=True, description='입학일 (YYYY-MM-DD)'),
+    'endDate': fields.String(required=True, description='졸업일 (YYYY-MM-DD)')
+})
+
+resume_model = user_ns.model('Resume', {
+    'name': fields.String(required=True, description='이름'),
+    'email': fields.String(required=True, description='이메일'),
+    'phone': fields.String(description='전화번호'),
+    'introduction': fields.String(description='자기소개'),
+    'workExperience': fields.List(fields.Nested(work_experience_model), description='경력 사항'),
+    'projects': fields.List(fields.Nested(project_model), description='프로젝트'),
+    'skills': fields.List(fields.String, description='기술 스택'),
+    'education': fields.List(fields.Nested(education_model), description='학력')
+})
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -33,9 +68,6 @@ def get_profile():
     work_experiences = WorkExperience.query.filter_by(user_id=user_id).all()
     projects = Project.query.filter_by(user_id=user_id).all()
     education = Education.query.filter_by(user_id=user_id).all()
-    awards = Award.query.filter_by(user_id=user_id).all()
-    certificates = Certificate.query.filter_by(user_id=user_id).all()
-    skills = Skill.query.filter_by(user_id=user_id).all()
     
     return jsonify({
         'user': {
@@ -74,21 +106,7 @@ def get_profile():
             'major': edu.major,
             'period': edu.period,
             'description': edu.description
-        } for edu in education],
-        'awards': [{
-            'id': award.id,
-            'name': award.name,
-            'period': award.period,
-            'description': award.description
-        } for award in awards],
-        'certificates': [{
-            'id': cert.id,
-            'name': cert.name,
-            'organization': cert.organization,
-            'date': cert.date.isoformat() if cert.date else None,
-            'number': cert.number
-        } for cert in certificates],
-        'skills': [skill.name for skill in skills]
+        } for edu in education]
     }), 200
 
 @user_bp.route('/profile', methods=['PUT'])
@@ -202,6 +220,7 @@ class Resume(Resource):
                  404: '사용자를 찾을 수 없음',
                  500: '서버 오류'
              })
+    @user_ns.expect(resume_model)
     def post(self):
         """사용자의 이력서를 저장합니다."""
         try:
