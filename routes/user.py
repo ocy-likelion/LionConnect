@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 user_bp = Blueprint('user', __name__)
-api = Namespace('user', description='사용자 관련 API')
+user_ns = Namespace('user', description='사용자 관련 API')
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -164,10 +164,10 @@ def add_skill():
     
     return jsonify({'message': '기술 스택이 추가되었습니다.'}), 201
 
-@api.route('/resume')
+@user_ns.route('/resume')
 class Resume(Resource):
     @jwt_required()
-    @api.doc('이력서 저장',
+    @user_ns.doc('이력서 저장',
              description='''
              사용자의 이력서를 저장합니다.
              
@@ -195,18 +195,13 @@ class Resume(Resource):
                - degree: 학위 (필수)
                - startDate: 입학일 (필수, YYYY-MM-DD)
                - endDate: 졸업일 (필수, YYYY-MM-DD)
-             
-             응답:
-             - 200: 이력서 저장 성공
-             - 401: 인증 실패
-             - 404: 사용자를 찾을 수 없음
-             - 500: 서버 오류
-             ''')
-    @api.expect(resume_model)
-    @api.response(200, '이력서 저장 성공')
-    @api.response(401, '인증 실패')
-    @api.response(404, '사용자를 찾을 수 없음')
-    @api.response(500, '서버 오류')
+             ''',
+             responses={
+                 200: '이력서 저장 성공',
+                 401: '인증 실패',
+                 404: '사용자를 찾을 수 없음',
+                 500: '서버 오류'
+             })
     def post(self):
         """사용자의 이력서를 저장합니다."""
         try:
@@ -228,8 +223,6 @@ class Resume(Resource):
             WorkExperience.query.filter_by(user_id=user.id).delete()
             Project.query.filter_by(user_id=user.id).delete()
             Education.query.filter_by(user_id=user.id).delete()
-            Award.query.filter_by(user_id=user.id).delete()
-            Certificate.query.filter_by(user_id=user.id).delete()
             
             # 경력 추가
             if 'workExperience' in data:
@@ -285,6 +278,4 @@ class Resume(Resource):
             
         except Exception as e:
             db.session.rollback()
-            print(f"Error saving resume: {str(e)}")
-            print(traceback.format_exc())
             return {'error': str(e)}, 500 

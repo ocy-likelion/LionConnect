@@ -91,5 +91,8 @@ auth_ns.add_resource(Login, '/login')
 auth_ns.add_resource(Signup, '/signup')
 user_ns.add_resource(Resume, '/resume')
 
+api.add_namespace(auth_ns)
+api.add_namespace(user_ns)
+
 if __name__ == '__main__':
     app.run(debug=True) 

@@ -1,12 +1,13 @@
 from flask import Blueprint, request, jsonify
-from models import User, Skill
-from extensions import db, bcrypt, jwt, create_access_token
+from models import User
+from extensions import db
+from flask_jwt_extended import create_access_token
 from flask_restx import Resource, Namespace
 import re
 from app import api, user_model, login_model, signup_model
 
 auth_bp = Blueprint('auth', __name__)
-api = Namespace('auth', description='인증 관련 API')
+auth_ns = Namespace('auth', description='인증 관련 API')
 
 def validate_password(password):
     """비밀번호 유효성 검사"""
@@ -20,9 +21,9 @@ def validate_password(password):
         return False
     return True
 
-@api.route('/signup')
+@auth_ns.route('/signup')
 class Signup(Resource):
-    @api.doc('새로운 사용자 등록',
+    @auth_ns.doc('새로운 사용자 등록',
              description='''
              새로운 사용자를 등록합니다.
              
@@ -108,9 +109,9 @@ class Signup(Resource):
             db.session.rollback()
             return {'error': str(e)}, 500
 
-@api.route('/login')
+@auth_ns.route('/login')
 class Login(Resource):
-    @api.doc('사용자 로그인',
+    @auth_ns.doc('사용자 로그인',
              description='이메일과 비밀번호로 로그인합니다.',
              responses={
                  200: '로그인 성공',
