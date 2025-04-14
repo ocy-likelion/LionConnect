@@ -22,47 +22,6 @@ api = Api(
     doc='/docs'
 )
 
-# 데이터베이스 설정
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://postgres:1234@localhost:5432/lion_connect')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# JWT 설정
-app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'your-secret-key')
-app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=1)
-app.config['JWT_ERROR_MESSAGE_KEY'] = 'error'
-app.config['JWT_BLACKLIST_ENABLED'] = False
-
-# 파일 업로드 설정
-app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB
-app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif'}
-
-# 업로드 폴더가 없으면 생성
-if not os.path.exists(app.config['UPLOAD_FOLDER']):
-    os.makedirs(app.config['UPLOAD_FOLDER'])
-
-# 확장 초기화
-db.init_app(app)
-bcrypt.init_app(app)
-migrate.init_app(app, db)
-jwt.init_app(app)
-
-# 모델 import
-from models import User, WorkExperience, Project, Skill, Education, Award, Certificate
-
-# 라우트 import
-from routes.auth import auth_bp
-from routes.user import user_bp
-
-# 블루프린트 등록
-app.register_blueprint(auth_bp, url_prefix='/api/auth')
-app.register_blueprint(user_bp, url_prefix='/api/user')
-
-# 파일 확장자 검사 함수
-def allowed_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
-
 # API 모델 정의
 user_model = api.model('User', {
     'email': fields.String(required=True, description='사용자 이메일'),
@@ -76,6 +35,11 @@ user_model = api.model('User', {
     'industry': fields.String(description='산업 분야 (company만 해당)'),
     'company_size': fields.String(description='회사 규모 (company만 해당)'),
     'company_location': fields.String(description='회사 위치 (company만 해당)')
+})
+
+login_model = api.model('Login', {
+    'email': fields.String(required=True, description='사용자 이메일'),
+    'password': fields.String(required=True, description='비밀번호')
 })
 
 resume_model = api.model('Resume', {
@@ -106,6 +70,47 @@ resume_model = api.model('Resume', {
         'endDate': fields.String(required=True)
     })))
 })
+
+# 데이터베이스 설정
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://postgres:1234@localhost:5432/lion_connect')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# JWT 설정
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'your-secret-key')
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=1)
+app.config['JWT_ERROR_MESSAGE_KEY'] = 'error'
+app.config['JWT_BLACKLIST_ENABLED'] = False
+
+# 파일 업로드 설정
+app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB
+app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif'}
+
+# 업로드 폴더가 없으면 생성
+if not os.path.exists(app.config['UPLOAD_FOLDER']):
+    os.makedirs(app.config['UPLOAD_FOLDER'])
+
+# 확장 초기화
+db.init_app(app)
+bcrypt.init_app(app)
+migrate.init_app(app, db)
+jwt.init_app(app)
+
+# 모델 import
+from models import User, WorkExperience, Project, Skill, Education, Award, Certificate
+
+# 라우트 import
+from routes.auth import auth_bp, api as auth_api
+from routes.user import user_bp, api as user_api
+
+# API 네임스페이스 등록
+api.add_namespace(auth_api, path='/api/auth')
+api.add_namespace(user_api, path='/api/user')
+
+# 파일 확장자 검사 함수
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
 @api.route('/')
 class Welcome(Resource):

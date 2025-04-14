@@ -11,6 +11,7 @@ import uuid
 from datetime import datetime
 import base64
 from flask_restx import Resource, Namespace
+from app import api, resume_model
 
 # 로깅 설정
 logging.basicConfig(level=logging.DEBUG)
@@ -167,7 +168,7 @@ def add_skill():
 class Resume(Resource):
     @jwt_required()
     @api.doc('이력서 저장')
-    @api.expect(api.models['Resume'])
+    @api.expect(resume_model)
     def post(self):
         """사용자의 이력서를 저장합니다."""
         try:

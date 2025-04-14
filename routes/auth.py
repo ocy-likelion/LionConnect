@@ -3,6 +3,7 @@ from models import User, Skill
 from extensions import db, bcrypt, jwt, create_access_token
 from flask_restx import Resource, Namespace
 import re
+from app import api, user_model, login_model
 
 auth_bp = Blueprint('auth', __name__)
 api = Namespace('auth', description='인증 관련 API')
@@ -22,7 +23,7 @@ def validate_password(password):
 @api.route('/signup')
 class Signup(Resource):
     @api.doc('회원가입')
-    @api.expect(api.models['User'])
+    @api.expect(user_model)
     def post(self):
         """새로운 사용자를 등록합니다."""
         try:
@@ -86,7 +87,7 @@ class Signup(Resource):
 @api.route('/login')
 class Login(Resource):
     @api.doc('로그인')
-    @api.expect(api.models['Login'])
+    @api.expect(login_model)
     def post(self):
         """사용자 로그인을 처리합니다."""
         try:
