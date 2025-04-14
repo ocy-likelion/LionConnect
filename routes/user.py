@@ -10,12 +10,18 @@ import os
 import uuid
 from datetime import datetime
 import base64
+from flask_restx import Resource, Namespace
 
 # 로깅 설정
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 user_bp = Blueprint('user', __name__)
+api = Namespace('user', description='사용자 관련 API')
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in current_app.config['ALLOWED_EXTENSIONS']
 
 @user_bp.route('/profile', methods=['GET'])
 @jwt_required()
@@ -157,183 +163,89 @@ def add_skill():
     
     return jsonify({'message': '기술 스택이 추가되었습니다.'}), 201
 
-@user_bp.route('/resume', methods=['POST'])
-@jwt_required()
-def save_resume():
-    try:
-        current_user_id = get_jwt_identity()
-        data = request.get_json()
-        
-        logger.debug(f"Resume save request for user {current_user_id}")
-        logger.debug(f"Request data: {data}")
-        
-        user = User.query.get(current_user_id)
-        if not user:
-            return jsonify({'error': 'User not found'}), 404
-        
-        # 사용자 정보 업데이트
-        if 'name' in data:
-            user.name = data['name']
-        if 'email' in data:
-            user.email = data['email']
-        if 'phone' in data:
-            user.phone = data['phone']
-        if 'introduction' in data:
-            user.introduction = data['introduction']
-        
-        # 경력 업데이트
-        if 'workExperience' in data:
-            # 기존 경력 삭제
-            WorkExperience.query.filter_by(user_id=current_user_id).delete()
+@api.route('/resume')
+class Resume(Resource):
+    @jwt_required()
+    @api.doc('이력서 저장')
+    @api.expect(api.models['Resume'])
+    def post(self):
+        """사용자의 이력서를 저장합니다."""
+        try:
+            current_user_id = get_jwt_identity()
+            user = User.query.get(current_user_id)
             
-            for exp in data['workExperience']:
-                try:
-                    work_exp = WorkExperience(
-                        user_id=current_user_id,
-                        company=exp['company'],
-                        position=exp['position'],
-                        start_date=datetime.strptime(exp['startDate'], '%Y-%m-%d'),
-                        end_date=datetime.strptime(exp['endDate'], '%Y-%m-%d') if exp.get('endDate') else None,
-                        description=exp.get('description', '')
+            if not user:
+                return {'error': 'User not found'}, 404
+            
+            data = request.get_json()
+            
+            # 사용자 정보 업데이트
+            user.name = data.get('name', user.name)
+            user.email = data.get('email', user.email)
+            user.phone = data.get('phone', user.phone)
+            user.introduction = data.get('introduction', user.introduction)
+            
+            # 기존 데이터 삭제
+            WorkExperience.query.filter_by(user_id=user.id).delete()
+            Project.query.filter_by(user_id=user.id).delete()
+            Education.query.filter_by(user_id=user.id).delete()
+            Award.query.filter_by(user_id=user.id).delete()
+            Certificate.query.filter_by(user_id=user.id).delete()
+            
+            # 경력 추가
+            if 'workExperience' in data:
+                for exp_data in data['workExperience']:
+                    experience = WorkExperience(
+                        user_id=user.id,
+                        company=exp_data['company'],
+                        position=exp_data['position'],
+                        start_date=exp_data['startDate'],
+                        end_date=exp_data['endDate'],
+                        description=exp_data.get('description', '')
                     )
-                    db.session.add(work_exp)
-                except Exception as e:
-                    logger.error(f"Error processing work experience: {str(e)}")
-                    logger.error(traceback.format_exc())
-                    return jsonify({'error': 'Invalid work experience data format'}), 400
-        
-        # 프로젝트 업데이트
-        if 'projects' in data:
-            # 기존 프로젝트 삭제
-            Project.query.filter_by(user_id=current_user_id).delete()
+                    db.session.add(experience)
             
-            for proj in data['projects']:
-                try:
+            # 프로젝트 추가
+            if 'projects' in data:
+                for proj_data in data['projects']:
                     project = Project(
-                        user_id=current_user_id,
-                        title=proj['title'],
-                        description=proj.get('description', ''),
-                        start_date=datetime.strptime(proj['startDate'], '%Y-%m-%d'),
-                        end_date=datetime.strptime(proj['endDate'], '%Y-%m-%d') if proj.get('endDate') else None,
-                        technologies=proj.get('technologies', [])
+                        user_id=user.id,
+                        title=proj_data['title'],
+                        description=proj_data['description'],
+                        start_date=proj_data['startDate'],
+                        end_date=proj_data['endDate'],
+                        tech_stack=proj_data.get('techStack', [])
                     )
-                    
-                    # 프로젝트 이미지 처리
-                    if 'image' in proj and proj['image']:
-                        try:
-                            image_data = proj['image'].split(',')[1]  # Base64 데이터 추출
-                            image_bytes = base64.b64decode(image_data)
-                            
-                            # 파일명 생성
-                            filename = secure_filename(f"{uuid.uuid4()}.png")
-                            filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-                            
-                            # 이미지 저장
-                            with open(filepath, 'wb') as f:
-                                f.write(image_bytes)
-                            
-                            project.image_path = filename
-                        except Exception as e:
-                            logger.error(f"Error processing project image: {str(e)}")
-                            logger.error(traceback.format_exc())
-                    
                     db.session.add(project)
-                except Exception as e:
-                    logger.error(f"Error processing project: {str(e)}")
-                    logger.error(traceback.format_exc())
-                    return jsonify({'error': 'Invalid project data format'}), 400
-        
-        # 기술 스택 업데이트
-        if 'skills' in data:
-            # 기존 기술 스택 삭제
-            Skill.query.filter_by(user_id=current_user_id).delete()
             
-            for skill_name in data['skills']:
-                try:
-                    skill = Skill(
-                        user_id=current_user_id,
-                        name=skill_name
-                    )
-                    db.session.add(skill)
-                except Exception as e:
-                    logger.error(f"Error processing skill: {str(e)}")
-                    logger.error(traceback.format_exc())
-                    return jsonify({'error': 'Invalid skill data format'}), 400
-        
-        # 학력 업데이트
-        if 'education' in data:
-            # 기존 학력 삭제
-            Education.query.filter_by(user_id=current_user_id).delete()
+            # 기술 스택 처리
+            if 'skills' in data:
+                user.skills = []
+                for skill_name in data['skills']:
+                    skill = Skill.query.filter_by(name=skill_name).first()
+                    if not skill:
+                        skill = Skill(name=skill_name)
+                        db.session.add(skill)
+                    user.skills.append(skill)
             
-            for edu in data['education']:
-                try:
+            # 학력 추가
+            if 'education' in data:
+                for edu_data in data['education']:
                     education = Education(
-                        user_id=current_user_id,
-                        school=edu['school'],
-                        degree=edu['degree'],
-                        field=edu['field'],
-                        start_date=datetime.strptime(edu['startDate'], '%Y-%m-%d'),
-                        end_date=datetime.strptime(edu['endDate'], '%Y-%m-%d') if edu.get('endDate') else None,
-                        description=edu.get('description', '')
+                        user_id=user.id,
+                        school=edu_data['school'],
+                        major=edu_data['major'],
+                        degree=edu_data['degree'],
+                        start_date=edu_data['startDate'],
+                        end_date=edu_data['endDate']
                     )
                     db.session.add(education)
-                except Exception as e:
-                    logger.error(f"Error processing education: {str(e)}")
-                    logger.error(traceback.format_exc())
-                    return jsonify({'error': 'Invalid education data format'}), 400
-        
-        # 수상 업데이트
-        if 'awards' in data:
-            # 기존 수상 삭제
-            Award.query.filter_by(user_id=current_user_id).delete()
             
-            for award_data in data['awards']:
-                try:
-                    award = Award(
-                        user_id=current_user_id,
-                        title=award_data['title'],
-                        organization=award_data['organization'],
-                        date=datetime.strptime(award_data['date'], '%Y-%m-%d'),
-                        description=award_data.get('description', '')
-                    )
-                    db.session.add(award)
-                except Exception as e:
-                    logger.error(f"Error processing award: {str(e)}")
-                    logger.error(traceback.format_exc())
-                    return jsonify({'error': 'Invalid award data format'}), 400
-        
-        # 자격증 업데이트
-        if 'certificates' in data:
-            # 기존 자격증 삭제
-            Certificate.query.filter_by(user_id=current_user_id).delete()
-            
-            for cert_data in data['certificates']:
-                try:
-                    certificate = Certificate(
-                        user_id=current_user_id,
-                        name=cert_data['name'],
-                        organization=cert_data['organization'],
-                        issue_date=datetime.strptime(cert_data['issueDate'], '%Y-%m-%d'),
-                        expiry_date=datetime.strptime(cert_data['expiryDate'], '%Y-%m-%d') if cert_data.get('expiryDate') else None,
-                        description=cert_data.get('description', '')
-                    )
-                    db.session.add(certificate)
-                except Exception as e:
-                    logger.error(f"Error processing certificate: {str(e)}")
-                    logger.error(traceback.format_exc())
-                    return jsonify({'error': 'Invalid certificate data format'}), 400
-        
-        try:
             db.session.commit()
-            logger.info(f"Resume saved successfully for user {current_user_id}")
-            return jsonify({'message': 'Resume saved successfully'}), 200
+            return {'message': 'Resume saved successfully'}, 200
+            
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Database error: {str(e)}")
-            logger.error(traceback.format_exc())
-            return jsonify({'error': 'Database error occurred'}), 500
-            
-    except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")
-        logger.error(traceback.format_exc())
-        return jsonify({'error': 'An unexpected error occurred'}), 500 
+            print(f"Error saving resume: {str(e)}")
+            print(traceback.format_exc())
+            return {'error': str(e)}, 500 
