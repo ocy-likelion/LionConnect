@@ -6,11 +6,13 @@ import os
 from dotenv import load_dotenv
 from extensions import db, bcrypt, jwt, migrate
 from flask_restx import Api, Resource, fields
+from config import Config
 
 # .env 파일 로드
 load_dotenv()
 
 app = Flask(__name__)
+app.config.from_object(Config)
 CORS(app)
 
 # Swagger UI 설정
@@ -19,7 +21,8 @@ api = Api(
     version='1.0',
     title='Lion Connect API',
     description='Lion Connect 백엔드 API 문서',
-    doc='/docs'
+    doc='/docs',
+    prefix='/api'
 )
 
 # API 모델 정의
@@ -104,8 +107,8 @@ from routes.auth import auth_bp, api as auth_api
 from routes.user import user_bp, api as user_api
 
 # API 네임스페이스 등록
-api.add_namespace(auth_api, path='/api/auth')
-api.add_namespace(user_api, path='/api/user')
+auth_ns = api.namespace('auth', description='인증 관련 API')
+user_ns = api.namespace('user', description='사용자 관련 API')
 
 # 파일 확장자 검사 함수
 def allowed_file(filename):
@@ -121,6 +124,14 @@ class Welcome(Resource):
             'version': '1.0.0',
             'documentation': '/docs'
         }
+
+# 블루프린트를 API 네임스페이스에 등록
+from routes.auth import Login, Signup
+from routes.user import Resume
+
+auth_ns.add_resource(Login, '/login')
+auth_ns.add_resource(Signup, '/signup')
+user_ns.add_resource(Resume, '/resume')
 
 if __name__ == '__main__':
     app.run(debug=True) 
