@@ -22,8 +22,36 @@ def validate_password(password):
 
 @api.route('/signup')
 class Signup(Resource):
-    @api.doc('회원가입')
+    @api.doc('회원가입',
+             description='''
+             새로운 사용자를 등록합니다.
+             
+             요청 데이터:
+             - email: 사용자 이메일 (필수)
+             - password: 비밀번호 (필수, 8자 이상, 영문/숫자/특수문자 포함)
+             - name: 이름 (필수)
+             - user_type: 사용자 타입 (필수, 'student' 또는 'company')
+             
+             student 타입일 경우 추가 필드:
+             - course: 수강 코스
+             - skills: 기술 스택 목록
+             - portfolio: 포트폴리오 URL
+             
+             company 타입일 경우 추가 필드:
+             - company_name: 회사명
+             - industry: 산업 분야
+             - company_size: 회사 규모
+             - company_location: 회사 위치
+             
+             응답:
+             - 201: 회원가입 성공
+             - 400: 필수 필드 누락 또는 비밀번호 유효성 검사 실패
+             - 500: 서버 오류
+             ''')
     @api.expect(user_model)
+    @api.response(201, '회원가입 성공')
+    @api.response(400, '잘못된 요청')
+    @api.response(500, '서버 오류')
     def post(self):
         """새로운 사용자를 등록합니다."""
         try:
@@ -86,8 +114,25 @@ class Signup(Resource):
 
 @api.route('/login')
 class Login(Resource):
-    @api.doc('로그인')
+    @api.doc('로그인',
+             description='''
+             사용자 로그인을 처리합니다.
+             
+             요청 데이터:
+             - email: 사용자 이메일 (필수)
+             - password: 비밀번호 (필수)
+             
+             응답:
+             - 200: 로그인 성공, JWT 토큰 반환
+             - 400: 필수 필드 누락
+             - 401: 잘못된 이메일 또는 비밀번호
+             - 500: 서버 오류
+             ''')
     @api.expect(login_model)
+    @api.response(200, '로그인 성공')
+    @api.response(400, '잘못된 요청')
+    @api.response(401, '인증 실패')
+    @api.response(500, '서버 오류')
     def post(self):
         """사용자 로그인을 처리합니다."""
         try:

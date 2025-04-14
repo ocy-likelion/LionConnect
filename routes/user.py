@@ -167,8 +167,46 @@ def add_skill():
 @api.route('/resume')
 class Resume(Resource):
     @jwt_required()
-    @api.doc('이력서 저장')
+    @api.doc('이력서 저장',
+             description='''
+             사용자의 이력서를 저장합니다.
+             
+             요청 데이터:
+             - name: 이름 (필수)
+             - email: 이메일 (필수)
+             - phone: 전화번호
+             - introduction: 자기소개
+             - workExperience: 경력 사항 목록
+               - company: 회사명 (필수)
+               - position: 직책 (필수)
+               - startDate: 시작일 (필수, YYYY-MM-DD)
+               - endDate: 종료일 (필수, YYYY-MM-DD)
+               - description: 업무 설명
+             - projects: 프로젝트 목록
+               - title: 프로젝트명 (필수)
+               - description: 프로젝트 설명 (필수)
+               - startDate: 시작일 (필수, YYYY-MM-DD)
+               - endDate: 종료일 (필수, YYYY-MM-DD)
+               - techStack: 사용 기술 목록
+             - skills: 기술 스택 목록
+             - education: 학력 목록
+               - school: 학교명 (필수)
+               - major: 전공 (필수)
+               - degree: 학위 (필수)
+               - startDate: 입학일 (필수, YYYY-MM-DD)
+               - endDate: 졸업일 (필수, YYYY-MM-DD)
+             
+             응답:
+             - 200: 이력서 저장 성공
+             - 401: 인증 실패
+             - 404: 사용자를 찾을 수 없음
+             - 500: 서버 오류
+             ''')
     @api.expect(resume_model)
+    @api.response(200, '이력서 저장 성공')
+    @api.response(401, '인증 실패')
+    @api.response(404, '사용자를 찾을 수 없음')
+    @api.response(500, '서버 오류')
     def post(self):
         """사용자의 이력서를 저장합니다."""
         try:
