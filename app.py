@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from extensions import db, bcrypt, jwt, migrate
 from flask_restx import Api, Resource, fields
 from config import Config
+from models import User
+from models.api_models import create_api_models
 
 # .env 파일 로드
 load_dotenv()
@@ -25,54 +27,11 @@ api = Api(
     prefix='/api'
 )
 
-# API 모델 정의
-user_model = api.model('User', {
-    'email': fields.String(required=True, description='사용자 이메일'),
-    'password': fields.String(required=True, description='비밀번호'),
-    'name': fields.String(required=True, description='이름'),
-    'user_type': fields.String(required=True, description='사용자 타입 (student/company)'),
-    'course': fields.String(description='수강 코스 (student만 해당)'),
-    'skills': fields.List(fields.String, description='기술 스택 (student만 해당)'),
-    'portfolio': fields.String(description='포트폴리오 URL (student만 해당)'),
-    'company_name': fields.String(description='회사명 (company만 해당)'),
-    'industry': fields.String(description='산업 분야 (company만 해당)'),
-    'company_size': fields.String(description='회사 규모 (company만 해당)'),
-    'company_location': fields.String(description='회사 위치 (company만 해당)')
-})
-
-login_model = api.model('Login', {
-    'email': fields.String(required=True, description='사용자 이메일'),
-    'password': fields.String(required=True, description='비밀번호')
-})
-
-resume_model = api.model('Resume', {
-    'name': fields.String(required=True, description='이름'),
-    'email': fields.String(required=True, description='이메일'),
-    'phone': fields.String(description='전화번호'),
-    'introduction': fields.String(description='자기소개'),
-    'workExperience': fields.List(fields.Nested(api.model('WorkExperience', {
-        'company': fields.String(required=True),
-        'position': fields.String(required=True),
-        'startDate': fields.String(required=True),
-        'endDate': fields.String(required=True),
-        'description': fields.String()
-    }))),
-    'projects': fields.List(fields.Nested(api.model('Project', {
-        'title': fields.String(required=True),
-        'description': fields.String(required=True),
-        'startDate': fields.String(required=True),
-        'endDate': fields.String(required=True),
-        'techStack': fields.List(fields.String())
-    }))),
-    'skills': fields.List(fields.String()),
-    'education': fields.List(fields.Nested(api.model('Education', {
-        'school': fields.String(required=True),
-        'major': fields.String(required=True),
-        'degree': fields.String(required=True),
-        'startDate': fields.String(required=True),
-        'endDate': fields.String(required=True)
-    })))
-})
+# API 모델 생성
+api_models = create_api_models(api)
+login_model = api_models['login_model']
+signup_model = api_models['signup_model']
+resume_model = api_models['resume_model']
 
 # 데이터베이스 설정
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://postgres:1234@localhost:5432/lion_connect')
@@ -120,8 +79,7 @@ class Welcome(Resource):
     def get(self):
         """API 기본 정보를 반환합니다."""
         return {
-            'message': 'Lion Connect API에 오신 것을 환영합니다!',
-            'version': '1.0.0',
+            'message': 'Welcome to Lion Connect API',
             'documentation': '/docs'
         }
 
