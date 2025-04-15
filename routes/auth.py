@@ -155,17 +155,27 @@ class Login(Resource):
         """사용자 로그인을 처리합니다."""
         try:
             data = request.get_json()
+            print("로그인 요청 데이터:", data)  # 디버깅용 로그
             
             # 필수 필드 검사
             if not data or 'email' not in data or 'password' not in data:
+                print("필수 필드 누락")  # 디버깅용 로그
                 return {'error': 'Email and password are required'}, 400
             
             user = User.query.filter_by(email=data['email']).first()
+            print("조회된 사용자:", user)  # 디버깅용 로그
             
-            if not user or not user.check_password(data['password']):
+            if not user:
+                print("사용자를 찾을 수 없음")  # 디버깅용 로그
+                return {'error': 'Invalid email or password'}, 401
+                
+            if not user.check_password(data['password']):
+                print("비밀번호 불일치")  # 디버깅용 로그
                 return {'error': 'Invalid email or password'}, 401
             
             access_token = create_access_token(identity=str(user.id))
+            print("토큰 생성 완료:", access_token[:10] + "...")  # 디버깅용 로그 (토큰 일부만 출력)
+            
             response = jsonify({
                 'access_token': access_token,
                 'user_type': user.user_type,
@@ -175,4 +185,5 @@ class Login(Resource):
             return response, 200
             
         except Exception as e:
+            print("로그인 처리 중 에러:", str(e))  # 디버깅용 로그
             return {'error': str(e)}, 500 
