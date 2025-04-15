@@ -9,7 +9,7 @@ class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev')
     
     # 데이터베이스 설정
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'postgresql://postgres:1234@localhost:5432/lion_connect')
+    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'postgresql://postgres:uo7c6gbQ6VmhYkqRfs9YtNnb0Ud9O3ky@localhost:5432/lion_connect')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # JWT 설정
