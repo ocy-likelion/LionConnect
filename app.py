@@ -17,7 +17,11 @@ app.config.from_object(Config)
 # CORS 설정
 CORS(app, resources={
     r"/*": {
-        "origins": ["http://localhost:3000", "https://lion-connect-frontend.onrender.com"],
+        "origins": [
+            "http://localhost:3000",
+            "https://lion-connect-frontend.onrender.com",
+            "https://lion-connect.vercel.app"
+        ],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization", "Access-Control-Allow-Origin"],
         "expose_headers": ["Content-Type", "Authorization"],
