@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import styled from "styled-components";
 import { theme } from "../styles/theme";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import api from "../services/api";
 
 const Container = styled.div`
   max-width: 420px;
@@ -274,6 +275,7 @@ const LoginPage = () => {
     email: "",
     password: "",
   });
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -283,10 +285,21 @@ const LoginPage = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: 로그인 로직 구현
-    console.log(formData);
+    try {
+      const response = await api.post('/auth/login', formData);
+      const { token } = response.data;
+      localStorage.setItem('token', token);
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('로그인 실패:', error);
+      if (error.response?.status === 401) {
+        alert('이메일 또는 비밀번호가 올바르지 않습니다.');
+      } else {
+        alert('로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
+      }
+    }
   };
 
   return (

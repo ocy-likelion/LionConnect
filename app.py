@@ -19,14 +19,12 @@ CORS(app, resources={
     r"/*": {
         "origins": [
             "http://localhost:3000",
-            "https://lion-connect-frontend.onrender.com",
             "https://lion-connect.vercel.app"
         ],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization", "Access-Control-Allow-Origin"],
-        "expose_headers": ["Content-Type", "Authorization"],
-        "supports_credentials": True,
-        "max_age": 600
+        "allow_headers": ["Content-Type", "Authorization"],
+        "expose_headers": ["Authorization"],
+        "supports_credentials": True
     }
 })
 
@@ -65,10 +63,21 @@ def welcome():
 # 라우트와 API 모델 등록
 from routes.auth import auth_ns
 from routes.user import user_ns
+from routes.company import company_ns
 
 # 네임스페이스 등록
 api.add_namespace(auth_ns, path='/auth')
 api.add_namespace(user_ns, path='/user')
+api.add_namespace(company_ns, path='/company')
+
+# 블루프린트 등록
+from routes.auth import auth_bp
+from routes.user import user_bp
+from routes.company import company_bp
+
+app.register_blueprint(auth_bp)
+app.register_blueprint(user_bp)
+app.register_blueprint(company_bp)
 
 if __name__ == '__main__':
     app.run(debug=True) 

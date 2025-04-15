@@ -166,7 +166,13 @@ class Login(Resource):
                 return {'error': 'Invalid email or password'}, 401
             
             access_token = create_access_token(identity=str(user.id))
-            return {'access_token': access_token}, 200
+            response = jsonify({
+                'access_token': access_token,
+                'user_type': user.user_type,
+                'message': 'Login successful'
+            })
+            response.headers['Authorization'] = f'Bearer {access_token}'
+            return response, 200
             
         except Exception as e:
             return {'error': str(e)}, 500 
