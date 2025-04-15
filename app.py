@@ -38,8 +38,7 @@ api = Api(
     version='1.0',
     title='Lion Connect API',
     description='Lion Connect 백엔드 API 문서',
-    doc='/docs',
-    prefix='/api'
+    doc='/docs'
 )
 
 # 업로드 폴더가 없으면 생성
@@ -63,8 +62,9 @@ def welcome():
 from routes.auth import auth_ns
 from routes.user import user_ns
 
-api.add_namespace(auth_ns)
-api.add_namespace(user_ns)
+# 네임스페이스 등록
+api.add_namespace(auth_ns, path='/auth')
+api.add_namespace(user_ns, path='/user')
 
 if __name__ == '__main__':
     app.run(debug=True) 
