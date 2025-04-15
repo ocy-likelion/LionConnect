@@ -165,7 +165,7 @@ class Login(Resource):
             if not user or not user.check_password(data['password']):
                 return {'error': 'Invalid email or password'}, 401
             
-            access_token = create_access_token(identity=user.id)
+            access_token = create_access_token(identity=str(user.id))
             return {'access_token': access_token}, 200
             
         except Exception as e:
