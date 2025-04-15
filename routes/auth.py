@@ -14,15 +14,29 @@ login_model = auth_ns.model('Login', {
     'password': fields.String(required=True, description='비밀번호')
 })
 
-signup_model = auth_ns.model('Signup', {
+student_fields = {
     'email': fields.String(required=True, description='사용자 이메일'),
     'password': fields.String(required=True, description='비밀번호'),
     'name': fields.String(required=True, description='이름'),
-    'user_type': fields.String(required=True, description='사용자 유형 (student/company)'),
-    'skills': fields.List(fields.String, description='기술 스택 (학생인 경우)'),
-    'company_name': fields.String(description='회사명 (기업인 경우)'),
-    'company_description': fields.String(description='회사 소개 (기업인 경우)')
-})
+    'user_type': fields.String(required=True, description='사용자 유형 (student)'),
+    'skills': fields.List(fields.String, required=True, description='기술 스택'),
+    'course': fields.String(required=True, description='수료 과정')
+}
+
+company_fields = {
+    'email': fields.String(required=True, description='사용자 이메일'),
+    'password': fields.String(required=True, description='비밀번호'),
+    'name': fields.String(required=True, description='이름'),
+    'user_type': fields.String(required=True, description='사용자 유형 (company)'),
+    'company_name': fields.String(required=True, description='회사명'),
+    'company_description': fields.String(required=True, description='회사 소개'),
+    'industry': fields.String(required=True, description='산업군'),
+    'company_size': fields.String(required=True, description='기업 규모'),
+    'company_website': fields.String(required=True, description='기업 웹사이트')
+}
+
+student_signup_model = auth_ns.model('StudentSignup', student_fields)
+company_signup_model = auth_ns.model('CompanySignup', company_fields)
 
 def validate_password(password):
     """비밀번호 유효성 검사"""
@@ -43,27 +57,10 @@ class Signup(Resource):
              새로운 사용자를 등록합니다.
              
              사용자 유형:
-             - student: 학생 (기술 스택 필수)
-             - company: 기업 (회사명, 회사 소개 필수)
-             
-             요청 데이터:
-             - email: 사용자 이메일 (필수)
-             - password: 비밀번호 (필수, 8자 이상, 영문/숫자/특수문자 포함)
-             - name: 이름 (필수)
-             - user_type: 사용자 타입 (필수, 'student' 또는 'company')
-             
-             student 타입일 경우 추가 필드:
-             - skills: 기술 스택 목록 (필수)
-             
-             company 타입일 경우 추가 필드:
-             - company_name: 회사명 (필수)
-             - company_description: 회사 소개 (필수)
-             
-             응답:
-             201: 회원가입 성공
-             400: 필수 필드 누락 또는 유효하지 않은 데이터
-             409: 이메일 중복
-             500: 서버 오류
+             - student: 학생
+               - 필수 필드: email, password, name, user_type, skills, course
+             - company: 기업
+               - 필수 필드: email, password, name, user_type, company_name, company_description, industry, company_size, company_website
              ''',
              responses={
                  201: '회원가입 성공',
@@ -71,7 +68,19 @@ class Signup(Resource):
                  409: '이메일 중복',
                  500: '서버 오류'
              })
-    @auth_ns.expect(signup_model)
+    @auth_ns.expect(auth_ns.model('Signup', {
+        'email': fields.String(required=True),
+        'password': fields.String(required=True),
+        'name': fields.String(required=True),
+        'user_type': fields.String(required=True),
+        'skills': fields.List(fields.String),
+        'course': fields.String,
+        'company_name': fields.String,
+        'company_description': fields.String,
+        'industry': fields.String,
+        'company_size': fields.String,
+        'company_website': fields.String
+    }))
     def post(self):
         """새로운 사용자를 등록합니다."""
         try:
@@ -94,9 +103,12 @@ class Signup(Resource):
             if data['user_type'] == 'student':
                 if 'skills' not in data or not data['skills']:
                     return {'error': 'Skills are required for student'}, 400
+                if 'course' not in data or not data['course']:
+                    return {'error': 'Course is required for student'}, 400
             elif data['user_type'] == 'company':
-                if 'company_name' not in data or 'company_description' not in data:
-                    return {'error': 'Company name and description are required for company'}, 400
+                required_company_fields = ['company_name', 'company_description', 'industry', 'company_size', 'company_website']
+                if not all(field in data for field in required_company_fields):
+                    return {'error': f'Missing required company fields: {", ".join(required_company_fields)}'}, 400
             else:
                 return {'error': 'Invalid user type'}, 400
             
@@ -111,9 +123,13 @@ class Signup(Resource):
             # 사용자 유형별 추가 정보 저장
             if data['user_type'] == 'student':
                 user.skills = data['skills']
+                user.course = data['course']
             else:
                 user.company_name = data['company_name']
                 user.company_description = data['company_description']
+                user.industry = data['industry']
+                user.company_size = data['company_size']
+                user.company_website = data['company_website']
             
             db.session.add(user)
             db.session.commit()
