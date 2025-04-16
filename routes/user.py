@@ -135,7 +135,7 @@ class Profile(Resource):
     def get(self):
         """사용자의 프로필 정보를 조회합니다."""
         try:
-            # JWT 토큰에서 얻은 user_id를 정수로 변환
+            # JWT 토큰에서 얻은 user_id를 정수로 변환 (문자열로 저장된 값)
             current_user_id = int(get_jwt_identity())
             user = User.query.get(current_user_id)
             
