@@ -85,14 +85,17 @@ class Signup(Resource):
         """새로운 사용자를 등록합니다."""
         try:
             data = request.get_json()
+            print("회원가입 요청 데이터:", data)  # 디버깅용 로그
             
             # 필수 필드 검사
             required_fields = ['email', 'password', 'name', 'user_type']
             if not all(field in data for field in required_fields):
+                print("필수 필드 누락:", [field for field in required_fields if field not in data])  # 디버깅용 로그
                 return {'error': 'Missing required fields'}, 400
             
             # 이메일 중복 검사
             if User.query.filter_by(email=data['email']).first():
+                print("이메일 중복:", data['email'])  # 디버깅용 로그
                 return {'error': 'Email already exists'}, 409
             
             # 비밀번호 유효성 검사
@@ -173,10 +176,9 @@ class Login(Resource):
                 print("비밀번호 불일치")  # 디버깅용 로그
                 return {'error': 'Invalid email or password'}, 401
             
-            # user.id를 문자열로 변환하여 토큰 생성
-            user_id_str = str(user.id)
-            print(f"토큰 생성을 위한 user.id (문자열): {user_id_str}")  # 디버깅용 로그
-            access_token = create_access_token(identity=user_id_str)
+            # user.id를 직접 전달 (문자열 변환 없이)
+            print(f"토큰 생성을 위한 user.id: {user.id}")  # 디버깅용 로그
+            access_token = create_access_token(identity=user.id)
             print(f"토큰 생성 완료: {access_token[:10]}...")  # 디버깅용 로그 (토큰의 앞부분만 출력)
             
             return {
