@@ -221,6 +221,7 @@ const StudentSignupPage = () => {
         name: formData.name,
         email: formData.email,
         password: formData.password,
+        user_type: "student",
         course: formData.course,
         skills: skillsArray,
         portfolio: formData.portfolio,
