@@ -53,15 +53,19 @@ class User(db.Model):
         return check_password_hash(self.password, password)
 
 class WorkExperience(db.Model):
+    __tablename__ = 'work_experience'
+    
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     company = db.Column(db.String(100), nullable=False)
     department = db.Column(db.String(100))
     position = db.Column(db.String(100))
     is_current = db.Column(db.Boolean, default=False)
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=True)
     description = db.Column(db.Text)
-    start_date = db.Column(db.Date)
-    end_date = db.Column(db.Date)
+    
+    user = db.relationship('User', backref=db.backref('work_experiences', lazy=True))
 
 class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)
