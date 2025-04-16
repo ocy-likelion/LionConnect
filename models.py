@@ -1,5 +1,6 @@
 from extensions import db
 from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # 사용자-기술 스택 연결 테이블
 user_skills = db.Table('user_skills',
@@ -10,7 +11,7 @@ user_skills = db.Table('user_skills',
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(60), nullable=False)
+    password = db.Column(db.String(256), nullable=False)  # 해시된 비밀번호를 저장하므로 길이 증가
     name = db.Column(db.String(100), nullable=False)
     user_type = db.Column(db.String(20), nullable=False)  # 'student' 또는 'company'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -42,6 +43,14 @@ class User(db.Model):
     awards = db.relationship('Award', backref='user', lazy=True)
     certificates = db.relationship('Certificate', backref='user', lazy=True)
     skills = db.relationship('Skill', secondary=user_skills, backref='users', lazy=True)
+
+    def set_password(self, password):
+        """비밀번호를 해시하여 저장합니다."""
+        self.password = generate_password_hash(password)
+    
+    def check_password(self, password):
+        """입력된 비밀번호가 저장된 해시와 일치하는지 확인합니다."""
+        return check_password_hash(self.password, password)
 
 class WorkExperience(db.Model):
     id = db.Column(db.Integer, primary_key=True)
