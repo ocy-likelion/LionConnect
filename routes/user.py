@@ -399,7 +399,7 @@ class Resume(Resource):
             try:
                 # 기본 정보 업데이트
                 user.name = data.get('name', user.name)
-                user.email = data.get('email', user.email)
+                user.email = data.get('email', user.email)  # 이메일 업데이트 허용
                 user.phone = data.get('phone', user.phone)
                 user.introduction = data.get('introduction', user.introduction)
                 user.portfolio = data.get('portfolio', user.portfolio)
