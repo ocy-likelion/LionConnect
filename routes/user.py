@@ -539,4 +539,102 @@ class Resume(Resource):
         except Exception as e:
             print(f"[DEBUG] 전체 프로세스 중 오류 발생: {str(e)}")
             logger.error(f"Error in save_resume: {str(e)}")
-            return {'error': str(e)}, 500 
+            return {'error': str(e)}, 500
+
+@user_ns.route('/studentsprofile')
+class StudentList(Resource):
+    @user_ns.doc('수료생 목록 조회',
+             description='모든 수료생의 상세 정보를 조회합니다.',
+             responses={
+                 200: '조회 성공',
+                 401: '인증 실패',
+                 500: '서버 오류'
+             })
+    @jwt_required()
+    def get(self):
+        """모든 수료생의 상세 정보를 조회합니다."""
+        try:
+            # 현재 로그인한 사용자가 기업 회원인지 확인
+            current_user_id = get_jwt_identity()
+            current_user = User.query.get(current_user_id)
+            
+            if not current_user or current_user.user_type != 'company':
+                return {'message': 'Unauthorized access'}, 401
+
+            # 모든 수료생 조회
+            students = User.query.filter_by(user_type='student').all()
+            
+            response_data = []
+            for student in students:
+                # 각 학생의 관련 데이터 조회
+                work_experiences = WorkExperience.query.filter_by(user_id=student.id).all()
+                projects = Project.query.filter_by(user_id=student.id).all()
+                education = Education.query.filter_by(user_id=student.id).all()
+                awards = Award.query.filter_by(user_id=student.id).all()
+                certificates = Certificate.query.filter_by(user_id=student.id).all()
+                
+                student_data = {
+                    'user': {
+                        'id': student.id,
+                        'email': student.email,
+                        'name': student.name,
+                        'introduction': student.introduction,
+                        'phone': student.phone,
+                        'portfolio': student.portfolio,
+                        'blog': student.blog,
+                        'github': student.github,
+                        'course': student.course,
+                        'skills': [skill.name for skill in student.skills]
+                    },
+                    'work_experiences': [{
+                        'id': exp.id,
+                        'company': exp.company,
+                        'department': exp.department,
+                        'position': exp.position,
+                        'is_current': exp.is_current,
+                        'start_date': exp.start_date.isoformat() if exp.start_date else None,
+                        'end_date': exp.end_date.isoformat() if exp.end_date else None,
+                        'description': exp.description
+                    } for exp in work_experiences],
+                    'projects': [{
+                        'id': proj.id,
+                        'title': proj.title,
+                        'description': proj.description,
+                        'organization': proj.organization,
+                        'portfolio_url': proj.portfolio_url,
+                        'image_url': proj.image_url,
+                        'is_representative': proj.is_representative,
+                        'start_date': proj.start_date.isoformat() if proj.start_date else None,
+                        'end_date': proj.end_date.isoformat() if proj.end_date else None,
+                        'tech_stack': proj.tech_stack
+                    } for proj in projects],
+                    'education': [{
+                        'id': edu.id,
+                        'school': edu.school,
+                        'major': edu.major,
+                        'degree': edu.degree,
+                        'start_date': edu.start_date.isoformat() if edu.start_date else None,
+                        'end_date': edu.end_date.isoformat() if edu.end_date else None
+                    } for edu in education],
+                    'awards': [{
+                        'id': award.id,
+                        'name': award.name,
+                        'date': award.date.isoformat() if award.date else None,
+                        'description': award.description
+                    } for award in awards],
+                    'certificates': [{
+                        'id': cert.id,
+                        'name': cert.name,
+                        'organization': cert.organization,
+                        'date': cert.date.isoformat() if cert.date else None,
+                        'number': cert.number
+                    } for cert in certificates]
+                }
+                response_data.append(student_data)
+            
+            return response_data, 200
+            
+        except Exception as e:
+            logger.error(f"Error in student list: {str(e)}")
+            logger.error(traceback.format_exc())
+            return {'message': 'Internal server error'}, 500 
