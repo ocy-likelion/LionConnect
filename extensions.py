@@ -12,8 +12,8 @@ migrate = Migrate()
 @jwt.user_identity_loader
 def user_identity_lookup(user):
     if isinstance(user, int):
-        return user
-    return user.id
+        return str(user)
+    return str(user.id)
 
 @jwt.user_lookup_loader
 def user_lookup_callback(_jwt_header, jwt_data):

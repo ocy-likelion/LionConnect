@@ -176,7 +176,7 @@ class Login(Resource):
                 print("비밀번호 불일치")  # 디버깅용 로그
                 return {'error': 'Invalid email or password'}, 401
             
-            # user.id를 직접 전달 (문자열 변환 없이)
+            # user.id를 직접 전달
             print(f"토큰 생성을 위한 user.id: {user.id}")  # 디버깅용 로그
             access_token = create_access_token(identity=user.id)
             print(f"토큰 생성 완료: {access_token[:10]}...")  # 디버깅용 로그 (토큰의 앞부분만 출력)
