@@ -139,16 +139,17 @@ student_profile_response = user_ns.model('StudentProfileResponse', {
     }))),
     'awards': fields.List(fields.Nested(user_ns.model('AwardInfo', {
         'id': fields.Integer(description='수상 ID'),
-        'name': fields.String(description='수상명'),
-        'date': fields.String(description='수상일'),
+        'title': fields.String(description='수상명'),
+        'start_date': fields.String(description='시작일'),
+        'end_date': fields.String(description='종료일'),
         'description': fields.String(description='설명')
     }))),
     'certificates': fields.List(fields.Nested(user_ns.model('CertificateInfo', {
         'id': fields.Integer(description='자격증 ID'),
-        'name': fields.String(description='자격증명'),
+        'title': fields.String(description='자격증명'),
         'organization': fields.String(description='발급 기관'),
-        'date': fields.String(description='취득일'),
-        'number': fields.String(description='자격증 번호')
+        'issue_date': fields.String(description='취득일'),
+        'credential_id': fields.String(description='자격증 번호')
     })))
 })
 
@@ -691,16 +692,17 @@ class StudentList(Resource):
                     } for edu in education],
                     'awards': [{
                         'id': award.id,
-                        'name': award.name,
-                        'date': award.date.isoformat() if award.date else None,
+                        'title': award.title,
+                        'start_date': award.start_date.isoformat() if award.start_date else None,
+                        'end_date': award.end_date.isoformat() if award.end_date else None,
                         'description': award.description
                     } for award in awards],
                     'certificates': [{
                         'id': cert.id,
-                        'name': cert.name,
+                        'title': cert.title,
                         'organization': cert.organization,
-                        'date': cert.date.isoformat() if cert.date else None,
-                        'number': cert.number
+                        'issue_date': cert.issue_date.isoformat() if cert.issue_date else None,
+                        'credential_id': cert.credential_id
                     } for cert in certificates]
                 }
                 response_data.append(student_data)
