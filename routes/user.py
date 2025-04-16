@@ -135,18 +135,22 @@ class Profile(Resource):
     def get(self):
         """사용자의 프로필 정보를 조회합니다."""
         try:
-            # JWT 토큰에서 얻은 user_id를 정수로 변환 (문자열로 저장된 값)
-            current_user_id = int(get_jwt_identity())
-            user = User.query.get(current_user_id)
+            # 토큰에서 사용자 ID 가져오기 (문자열 상태로 유지)
+            current_user_id = get_jwt_identity()
+            print(f"토큰에서 가져온 user_id (문자열): {current_user_id}")  # 디버깅용 로그
+            
+            # 문자열 ID를 정수로 변환하여 데이터베이스 조회
+            user = User.query.get(int(current_user_id))
+            print(f"조회된 사용자: {user}")  # 디버깅용 로그
             
             if not user:
-                return {'error': 'User not found'}, 404
+                return {'message': 'User not found'}, 404
             
-            work_experiences = WorkExperience.query.filter_by(user_id=current_user_id).all()
-            projects = Project.query.filter_by(user_id=current_user_id).all()
-            education = Education.query.filter_by(user_id=current_user_id).all()
-            awards = Award.query.filter_by(user_id=current_user_id).all()
-            certificates = Certificate.query.filter_by(user_id=current_user_id).all()
+            work_experiences = WorkExperience.query.filter_by(user_id=int(current_user_id)).all()
+            projects = Project.query.filter_by(user_id=int(current_user_id)).all()
+            education = Education.query.filter_by(user_id=int(current_user_id)).all()
+            awards = Award.query.filter_by(user_id=int(current_user_id)).all()
+            certificates = Certificate.query.filter_by(user_id=int(current_user_id)).all()
             
             return {
                 'user': {

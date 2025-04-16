@@ -174,8 +174,10 @@ class Login(Resource):
                 return {'error': 'Invalid email or password'}, 401
             
             # user.id를 문자열로 변환하여 토큰 생성
-            access_token = create_access_token(identity=str(user.id))
-            print("토큰 생성 완료:", access_token[:10] + "...")  # 디버깅용 로그 (토큰 일부만 출력)
+            user_id_str = str(user.id)
+            print(f"토큰 생성을 위한 user.id (문자열): {user_id_str}")  # 디버깅용 로그
+            access_token = create_access_token(identity=user_id_str)
+            print(f"토큰 생성 완료: {access_token[:10]}...")  # 디버깅용 로그 (토큰의 앞부분만 출력)
             
             return {
                 'access_token': access_token,
