@@ -359,48 +359,19 @@ class Resume(Resource):
              사용자의 이력서를 저장합니다.
              
              요청 데이터:
-             - name: 이름 (필수)
-             - email: 이메일 (필수)
+             - name: 이름
+             - email: 이메일
              - phone: 전화번호
              - introduction: 자기소개
              - portfolio: 포트폴리오 URL
              - blog: 블로그 URL
              - github: GitHub URL
              - workExperience: 경력 사항 목록
-               - company: 회사명 (필수)
-               - department: 부서 (필수)
-               - position: 직책 (필수)
-               - is_current: 재직 여부
-               - startDate: 시작일 (필수, YYYY-MM-DD)
-               - endDate: 종료일 (필수, YYYY-MM-DD)
-               - description: 업무 설명
              - projects: 프로젝트 목록
-               - title: 프로젝트명 (필수)
-               - description: 프로젝트 설명 (필수)
-               - organization: 이행기관
-               - portfolio_url: 포트폴리오 링크
-               - image: 프로젝트 이미지 (Base64)
-               - is_representative: 대표 프로젝트 여부
-               - startDate: 시작일 (필수, YYYY-MM-DD)
-               - endDate: 종료일 (필수, YYYY-MM-DD)
-               - techStack: 사용 기술 목록
              - skills: 기술 스택 목록
              - education: 학력 목록
-               - school: 학교명 (필수)
-               - major: 전공 (필수)
-               - degree: 학위 (필수)
-               - startDate: 입학일 (필수, YYYY-MM-DD)
-               - endDate: 졸업일 (필수, YYYY-MM-DD)
-             - awards: 수상 및 활동 목록
-               - title: 수상 및 활동명 (필수)
-               - startDate: 시작일 (필수, YYYY-MM-DD)
-               - endDate: 종료일 (필수, YYYY-MM-DD)
-               - description: 상세 내용
+             - awards: 수상 목록
              - certificates: 자격증 목록
-               - title: 자격증명 (필수)
-               - organization: 기관 (필수)
-               - issueDate: 취득일 (필수, YYYY-MM-DD)
-               - credential_id: 자격증번호
              ''',
              responses={
                  200: '이력서 저장 성공',
@@ -413,117 +384,160 @@ class Resume(Resource):
         """사용자의 이력서를 저장합니다."""
         try:
             current_user_id = get_jwt_identity()
+            print(f"[DEBUG] 토큰에서 가져온 user_id: {current_user_id}, 타입: {type(current_user_id)}")
+            
             user = User.query.get(current_user_id)
+            print(f"[DEBUG] 조회된 사용자: {user}, 타입: {type(user)}")
             
             if not user:
-                return {'error': 'User not found'}, 404
+                print("[DEBUG] 사용자를 찾을 수 없음")
+                return {'message': 'User not found'}, 404
             
             data = request.get_json()
+            print(f"[DEBUG] 받은 요청 데이터: {data}")
             
-            # 사용자 정보 업데이트
-            user.name = data.get('name', user.name)
-            user.email = data.get('email', user.email)
-            user.phone = data.get('phone', user.phone)
-            user.introduction = data.get('introduction', user.introduction)
-            user.portfolio = data.get('portfolio', user.portfolio)
-            user.blog = data.get('blog', user.blog)
-            user.github = data.get('github', user.github)
-            
-            # 기존 데이터 삭제
-            WorkExperience.query.filter_by(user_id=user.id).delete()
-            Project.query.filter_by(user_id=user.id).delete()
-            Education.query.filter_by(user_id=user.id).delete()
-            Award.query.filter_by(user_id=user.id).delete()
-            Certificate.query.filter_by(user_id=user.id).delete()
-            
-            # 경력 추가
-            if 'workExperience' in data:
-                for exp_data in data['workExperience']:
-                    experience = WorkExperience(
-                        user_id=user.id,
-                        company=exp_data['company'],
-                        department=exp_data['department'],
-                        position=exp_data['position'],
-                        is_current=exp_data['is_current'],
-                        start_date=exp_data['startDate'],
-                        end_date=exp_data['endDate'],
-                        description=exp_data.get('description', '')
-                    )
-                    db.session.add(experience)
-            
-            # 프로젝트 추가
-            if 'projects' in data:
-                for proj_data in data['projects']:
-                    # 이미지 처리
-                    image_url = None
-                    if 'image' in proj_data and proj_data['image']:
-                        image_url = save_base64_image(proj_data['image'], user.id)
-                    
-                    project = Project(
-                        user_id=user.id,
-                        title=proj_data['title'],
-                        description=proj_data['description'],
-                        organization=proj_data.get('organization'),
-                        portfolio_url=proj_data.get('portfolio_url'),
-                        image_url=image_url,
-                        is_representative=proj_data.get('is_representative', False),
-                        start_date=proj_data['startDate'],
-                        end_date=proj_data['endDate'],
-                        tech_stack=proj_data.get('techStack', [])
-                    )
-                    db.session.add(project)
-            
-            # 기술 스택 처리
-            if 'skills' in data:
-                user.skills = []
-                for skill_name in data['skills']:
-                    skill = Skill.query.filter_by(name=skill_name).first()
-                    if not skill:
-                        skill = Skill(name=skill_name)
-                        db.session.add(skill)
-                    user.skills.append(skill)
-            
-            # 학력 추가
-            if 'education' in data:
-                for edu_data in data['education']:
-                    education = Education(
-                        user_id=user.id,
-                        school=edu_data['school'],
-                        major=edu_data['major'],
-                        degree=edu_data['degree'],
-                        start_date=edu_data['startDate'],
-                        end_date=edu_data['endDate']
-                    )
-                    db.session.add(education)
-            
-            # 수상 및 활동 추가
-            if 'awards' in data:
-                for award_data in data['awards']:
-                    award = Award(
-                        user_id=user.id,
-                        title=award_data['title'],
-                        start_date=award_data['startDate'],
-                        end_date=award_data['endDate'],
-                        description=award_data.get('description', '')
-                    )
-                    db.session.add(award)
-            
-            # 자격증 추가
-            if 'certificates' in data:
-                for cert_data in data['certificates']:
-                    certificate = Certificate(
-                        user_id=user.id,
-                        title=cert_data['title'],
-                        organization=cert_data['organization'],
-                        issue_date=cert_data['issueDate'],
-                        credential_id=cert_data.get('credential_id')
-                    )
-                    db.session.add(certificate)
-            
-            db.session.commit()
-            return {'message': 'Resume saved successfully'}, 200
-            
+            try:
+                # 기본 정보 업데이트
+                user.name = data.get('name', user.name)
+                user.email = data.get('email', user.email)
+                user.phone = data.get('phone', user.phone)
+                user.introduction = data.get('introduction', user.introduction)
+                user.portfolio = data.get('portfolio', user.portfolio)
+                user.blog = data.get('blog', user.blog)
+                user.github = data.get('github', user.github)
+                
+                print("[DEBUG] 기본 정보 업데이트 완료")
+                
+                # 기존 데이터 삭제
+                WorkExperience.query.filter_by(user_id=current_user_id).delete()
+                Project.query.filter_by(user_id=current_user_id).delete()
+                Education.query.filter_by(user_id=current_user_id).delete()
+                Award.query.filter_by(user_id=current_user_id).delete()
+                Certificate.query.filter_by(user_id=current_user_id).delete()
+                
+                print("[DEBUG] 기존 데이터 삭제 완료")
+                
+                # 경력 사항 저장
+                for exp_data in data.get('workExperience', []):
+                    print(f"[DEBUG] 경력 데이터 처리: {exp_data}")
+                    try:
+                        exp = WorkExperience(
+                            user_id=current_user_id,
+                            company=exp_data['company'],
+                            department=exp_data.get('department'),
+                            position=exp_data.get('position'),
+                            is_current=exp_data.get('is_current', False),
+                            description=exp_data.get('description'),
+                            start_date=datetime.strptime(exp_data['startDate'], '%Y-%m-%d').date() if exp_data.get('startDate') else None,
+                            end_date=datetime.strptime(exp_data['endDate'], '%Y-%m-%d').date() if exp_data.get('endDate') else None
+                        )
+                        db.session.add(exp)
+                        print(f"[DEBUG] 경력 추가: {exp.company}")
+                    except Exception as e:
+                        print(f"[DEBUG] 경력 데이터 처리 중 오류: {str(e)}")
+                        raise
+                
+                # 프로젝트 저장
+                for proj_data in data.get('projects', []):
+                    print(f"[DEBUG] 프로젝트 데이터 처리: {proj_data}")
+                    try:
+                        proj = Project(
+                            user_id=current_user_id,
+                            name=proj_data['title'],
+                            organization=proj_data.get('organization'),
+                            description=proj_data.get('description'),
+                            portfolio_url=proj_data.get('portfolio_url'),
+                            image_url=proj_data.get('image_url'),
+                            is_representative=proj_data.get('is_representative', False),
+                            start_date=datetime.strptime(proj_data['startDate'], '%Y-%m-%d').date() if proj_data.get('startDate') else None,
+                            end_date=datetime.strptime(proj_data['endDate'], '%Y-%m-%d').date() if proj_data.get('endDate') else None,
+                            tech_stack=proj_data.get('techStack', [])
+                        )
+                        db.session.add(proj)
+                        print(f"[DEBUG] 프로젝트 추가: {proj.name}")
+                    except Exception as e:
+                        print(f"[DEBUG] 프로젝트 데이터 처리 중 오류: {str(e)}")
+                        raise
+                
+                # 학력 저장
+                for edu_data in data.get('education', []):
+                    print(f"[DEBUG] 학력 데이터 처리: {edu_data}")
+                    try:
+                        edu = Education(
+                            user_id=current_user_id,
+                            school=edu_data['school'],
+                            major=edu_data.get('major'),
+                            degree=edu_data.get('degree'),
+                            start_date=datetime.strptime(edu_data['startDate'], '%Y-%m-%d').date() if edu_data.get('startDate') else None,
+                            end_date=datetime.strptime(edu_data['endDate'], '%Y-%m-%d').date() if edu_data.get('endDate') else None
+                        )
+                        db.session.add(edu)
+                        print(f"[DEBUG] 학력 추가: {edu.school}")
+                    except Exception as e:
+                        print(f"[DEBUG] 학력 데이터 처리 중 오류: {str(e)}")
+                        raise
+                
+                # 수상 내역 저장
+                for award_data in data.get('awards', []):
+                    print(f"[DEBUG] 수상 데이터 처리: {award_data}")
+                    try:
+                        award = Award(
+                            user_id=current_user_id,
+                            name=award_data['title'],
+                            start_date=datetime.strptime(award_data['startDate'], '%Y-%m-%d').date() if award_data.get('startDate') else None,
+                            end_date=datetime.strptime(award_data['endDate'], '%Y-%m-%d').date() if award_data.get('endDate') else None,
+                            description=award_data.get('description')
+                        )
+                        db.session.add(award)
+                        print(f"[DEBUG] 수상 추가: {award.name}")
+                    except Exception as e:
+                        print(f"[DEBUG] 수상 데이터 처리 중 오류: {str(e)}")
+                        raise
+                
+                # 자격증 저장
+                for cert_data in data.get('certificates', []):
+                    print(f"[DEBUG] 자격증 데이터 처리: {cert_data}")
+                    try:
+                        cert = Certificate(
+                            user_id=current_user_id,
+                            name=cert_data['title'],
+                            organization=cert_data.get('organization'),
+                            issue_date=datetime.strptime(cert_data['issueDate'], '%Y-%m-%d').date() if cert_data.get('issueDate') else None,
+                            credential_id=cert_data.get('credential_id')
+                        )
+                        db.session.add(cert)
+                        print(f"[DEBUG] 자격증 추가: {cert.name}")
+                    except Exception as e:
+                        print(f"[DEBUG] 자격증 데이터 처리 중 오류: {str(e)}")
+                        raise
+                
+                # 기술 스택 저장
+                print(f"[DEBUG] 기술 스택 처리: {data.get('skills', [])}")
+                try:
+                    for skill_name in data.get('skills', []):
+                        skill = Skill.query.filter_by(name=skill_name).first()
+                        if not skill:
+                            skill = Skill(name=skill_name)
+                            db.session.add(skill)
+                            db.session.flush()  # ID 생성을 위해 flush
+                        user.skills.append(skill)
+                    print("[DEBUG] 기술 스택 추가 완료")
+                except Exception as e:
+                    print(f"[DEBUG] 기술 스택 처리 중 오류: {str(e)}")
+                    raise
+                
+                db.session.commit()
+                print("[DEBUG] 모든 데이터 저장 완료")
+                
+                return {'message': 'Resume saved successfully'}, 200
+                
+            except Exception as e:
+                db.session.rollback()
+                print(f"[DEBUG] 데이터 저장 중 오류 발생: {str(e)}")
+                logger.error(f"Error saving resume: {str(e)}")
+                return {'error': str(e)}, 500
+                
         except Exception as e:
-            db.session.rollback()
-            logger.error(f"Error saving resume: {str(e)}\n{traceback.format_exc()}")
+            print(f"[DEBUG] 전체 프로세스 중 오류 발생: {str(e)}")
+            logger.error(f"Error in save_resume: {str(e)}")
             return {'error': str(e)}, 500 
