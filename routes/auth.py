@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from models import User
+from models import User, Skill
 from extensions import db
 from flask_jwt_extended import create_access_token
 from flask_restx import Resource, Namespace, fields
@@ -125,7 +125,13 @@ class Signup(Resource):
             
             # 사용자 유형별 추가 정보 저장
             if data['user_type'] == 'student':
-                user.skills = data['skills']
+                # skills 처리
+                for skill_name in data['skills']:
+                    skill = Skill.query.filter_by(name=skill_name).first()
+                    if not skill:
+                        skill = Skill(name=skill_name)
+                        db.session.add(skill)
+                    user.skills.append(skill)
                 user.course = data['course']
             else:
                 user.company_name = data['company_name']
