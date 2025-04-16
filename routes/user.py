@@ -482,13 +482,13 @@ class Resume(Resource):
                     try:
                         award = Award(
                             user_id=current_user_id,
-                            name=award_data['title'],
+                            title=award_data['title'],
                             start_date=datetime.strptime(award_data['startDate'], '%Y-%m-%d').date() if award_data.get('startDate') else None,
                             end_date=datetime.strptime(award_data['endDate'], '%Y-%m-%d').date() if award_data.get('endDate') else None,
                             description=award_data.get('description')
                         )
                         db.session.add(award)
-                        print(f"[DEBUG] 수상 추가: {award.name}")
+                        print(f"[DEBUG] 수상 추가: {award.title}")
                     except Exception as e:
                         print(f"[DEBUG] 수상 데이터 처리 중 오류: {str(e)}")
                         raise
