@@ -135,14 +135,18 @@ class Profile(Resource):
     def get(self):
         """사용자의 프로필 정보를 조회합니다."""
         try:
-            user_id = get_jwt_identity()
-            user = User.query.get_or_404(user_id)
+            # JWT 토큰에서 얻은 user_id를 정수로 변환
+            current_user_id = int(get_jwt_identity())
+            user = User.query.get(current_user_id)
             
-            work_experiences = WorkExperience.query.filter_by(user_id=user_id).all()
-            projects = Project.query.filter_by(user_id=user_id).all()
-            education = Education.query.filter_by(user_id=user_id).all()
-            awards = Award.query.filter_by(user_id=user_id).all()
-            certificates = Certificate.query.filter_by(user_id=user_id).all()
+            if not user:
+                return {'error': 'User not found'}, 404
+            
+            work_experiences = WorkExperience.query.filter_by(user_id=current_user_id).all()
+            projects = Project.query.filter_by(user_id=current_user_id).all()
+            education = Education.query.filter_by(user_id=current_user_id).all()
+            awards = Award.query.filter_by(user_id=current_user_id).all()
+            certificates = Certificate.query.filter_by(user_id=current_user_id).all()
             
             return {
                 'user': {
