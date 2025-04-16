@@ -94,6 +94,64 @@ resume_model = user_ns.model('Resume', {
     'certificates': fields.List(fields.Nested(certificate_model), description='자격증')
 })
 
+student_profile_response = user_ns.model('StudentProfileResponse', {
+    'user': fields.Nested(user_ns.model('StudentInfo', {
+        'id': fields.Integer(description='사용자 ID'),
+        'email': fields.String(description='이메일'),
+        'name': fields.String(description='이름'),
+        'introduction': fields.String(description='자기소개'),
+        'phone': fields.String(description='전화번호'),
+        'portfolio': fields.String(description='포트폴리오 URL'),
+        'blog': fields.String(description='블로그 URL'),
+        'github': fields.String(description='GitHub URL'),
+        'course': fields.String(description='수료 과정'),
+        'skills': fields.List(fields.String, description='기술 스택')
+    })),
+    'work_experiences': fields.List(fields.Nested(user_ns.model('WorkExperienceInfo', {
+        'id': fields.Integer(description='경력 ID'),
+        'company': fields.String(description='회사명'),
+        'department': fields.String(description='부서'),
+        'position': fields.String(description='직책'),
+        'is_current': fields.Boolean(description='현재 재직 여부'),
+        'start_date': fields.String(description='시작일'),
+        'end_date': fields.String(description='종료일'),
+        'description': fields.String(description='업무 설명')
+    }))),
+    'projects': fields.List(fields.Nested(user_ns.model('ProjectInfo', {
+        'id': fields.Integer(description='프로젝트 ID'),
+        'title': fields.String(description='프로젝트명'),
+        'description': fields.String(description='프로젝트 설명'),
+        'organization': fields.String(description='수행 기관'),
+        'portfolio_url': fields.String(description='포트폴리오 URL'),
+        'image_url': fields.String(description='이미지 URL'),
+        'is_representative': fields.Boolean(description='대표 프로젝트 여부'),
+        'start_date': fields.String(description='시작일'),
+        'end_date': fields.String(description='종료일'),
+        'tech_stack': fields.List(fields.String, description='사용 기술')
+    }))),
+    'education': fields.List(fields.Nested(user_ns.model('EducationInfo', {
+        'id': fields.Integer(description='학력 ID'),
+        'school': fields.String(description='학교명'),
+        'major': fields.String(description='전공'),
+        'degree': fields.String(description='학위'),
+        'start_date': fields.String(description='입학일'),
+        'end_date': fields.String(description='졸업일')
+    }))),
+    'awards': fields.List(fields.Nested(user_ns.model('AwardInfo', {
+        'id': fields.Integer(description='수상 ID'),
+        'name': fields.String(description='수상명'),
+        'date': fields.String(description='수상일'),
+        'description': fields.String(description='설명')
+    }))),
+    'certificates': fields.List(fields.Nested(user_ns.model('CertificateInfo', {
+        'id': fields.Integer(description='자격증 ID'),
+        'name': fields.String(description='자격증명'),
+        'organization': fields.String(description='발급 기관'),
+        'date': fields.String(description='취득일'),
+        'number': fields.String(description='자격증 번호')
+    })))
+})
+
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in current_app.config['ALLOWED_EXTENSIONS']
@@ -544,13 +602,28 @@ class Resume(Resource):
 @user_ns.route('/studentsprofile')
 class StudentList(Resource):
     @user_ns.doc('수료생 목록 조회',
-             description='모든 수료생의 상세 정보를 조회합니다.',
+             description='''모든 수료생의 상세 정보를 조회합니다.
+             
+             ### 응답 데이터 포함 내용:
+             - 기본 정보 (이름, 이메일, 연락처 등)
+             - 수료 과정
+             - 기술 스택
+             - 경력 사항
+             - 프로젝트 이력
+             - 학력 사항
+             - 수상 내역
+             - 자격증
+             
+             ### 접근 권한:
+             - 기업 회원만 접근 가능
+             ''',
              responses={
-                 200: '조회 성공',
-                 401: '인증 실패',
+                 200: ('조회 성공', student_profile_response),
+                 401: '인증 실패 (토큰 없음 또는 기업 회원이 아님)',
                  500: '서버 오류'
              })
     @jwt_required()
+    @user_ns.marshal_list_with(student_profile_response)
     def get(self):
         """모든 수료생의 상세 정보를 조회합니다."""
         try:
