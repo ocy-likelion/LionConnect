@@ -154,7 +154,7 @@ class Profile(Resource):
                 education = Education.query.filter_by(user_id=current_user_id).all()
                 awards = Award.query.filter_by(user_id=current_user_id).all()
                 certificates = Certificate.query.filter_by(user_id=current_user_id).all()
-                skills = Skill.query.filter_by(user_id=current_user_id).all()
+                skills = user.skills  # User 모델의 relationship을 통해 skills 조회
                 
                 print(f"조회된 데이터 수: work_experiences={len(work_experiences)}, projects={len(projects)}, education={len(education)}, awards={len(awards)}, certificates={len(certificates)}, skills={len(skills)}")  # 디버깅용 로그
                 
