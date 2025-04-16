@@ -81,6 +81,7 @@ app.register_blueprint(company_bp)
 # JWT 에러 핸들러
 @jwt.expired_token_loader
 def expired_token_callback(jwt_header, jwt_payload):
+    print(f"토큰 만료: {jwt_payload}")  # 디버깅용 로그
     return jsonify({
         'status': 401,
         'sub_status': 42,
@@ -89,10 +90,20 @@ def expired_token_callback(jwt_header, jwt_payload):
 
 @jwt.invalid_token_loader
 def invalid_token_callback(error):
+    print(f"유효하지 않은 토큰: {error}")  # 디버깅용 로그
     return jsonify({
         'status': 401,
         'sub_status': 43,
         'message': 'Invalid token'
+    }), 401
+
+@jwt.unauthorized_loader
+def unauthorized_callback(error):
+    print(f"인증되지 않은 요청: {error}")  # 디버깅용 로그
+    return jsonify({
+        'status': 401,
+        'sub_status': 44,
+        'message': 'Missing Authorization Header'
     }), 401
 
 @app.route('/health')

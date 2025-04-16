@@ -135,79 +135,89 @@ class Profile(Resource):
     def get(self):
         """사용자의 프로필 정보를 조회합니다."""
         try:
-            # 토큰에서 사용자 ID 가져오기 (이미 정수)
+            # 토큰에서 사용자 ID 가져오기
             current_user_id = get_jwt_identity()
-            print(f"토큰에서 가져온 user_id: {current_user_id}")  # 디버깅용 로그
+            print(f"토큰에서 가져온 user_id: {current_user_id}, 타입: {type(current_user_id)}")  # 디버깅용 로그
             
             # 데이터베이스에서 사용자 조회
             user = User.query.get(current_user_id)
-            print(f"조회된 사용자: {user}")  # 디버깅용 로그
+            print(f"조회된 사용자: {user}, 타입: {type(user)}")  # 디버깅용 로그
             
             if not user:
+                print("사용자를 찾을 수 없음")  # 디버깅용 로그
                 return {'message': 'User not found'}, 404
             
-            work_experiences = WorkExperience.query.filter_by(user_id=current_user_id).all()
-            projects = Project.query.filter_by(user_id=current_user_id).all()
-            education = Education.query.filter_by(user_id=current_user_id).all()
-            awards = Award.query.filter_by(user_id=current_user_id).all()
-            certificates = Certificate.query.filter_by(user_id=current_user_id).all()
-            
-            return {
-                'user': {
-                    'id': user.id,
-                    'email': user.email,
-                    'name': user.name,
-                    'introduction': user.introduction,
-                    'phone': user.phone,
-                    'portfolio': user.portfolio,
-                    'blog': user.blog,
-                    'github': user.github
-                },
-                'work_experiences': [{
-                    'id': exp.id,
-                    'company': exp.company,
-                    'department': exp.department,
-                    'position': exp.position,
-                    'is_current': exp.is_current,
-                    'start_date': exp.start_date.isoformat() if exp.start_date else None,
-                    'end_date': exp.end_date.isoformat() if exp.end_date else None,
-                    'description': exp.description
-                } for exp in work_experiences],
-                'projects': [{
-                    'id': proj.id,
-                    'title': proj.title,
-                    'description': proj.description,
-                    'organization': proj.organization,
-                    'portfolio_url': proj.portfolio_url,
-                    'image_url': proj.image_url,
-                    'is_representative': proj.is_representative,
-                    'start_date': proj.start_date.isoformat() if proj.start_date else None,
-                    'end_date': proj.end_date.isoformat() if proj.end_date else None,
-                    'tech_stack': proj.tech_stack
-                } for proj in projects],
-                'education': [{
-                    'id': edu.id,
-                    'school': edu.school,
-                    'major': edu.major,
-                    'degree': edu.degree,
-                    'start_date': edu.start_date.isoformat() if edu.start_date else None,
-                    'end_date': edu.end_date.isoformat() if edu.end_date else None
-                } for edu in education],
-                'awards': [{
-                    'id': award.id,
-                    'title': award.title,
-                    'start_date': award.start_date.isoformat() if award.start_date else None,
-                    'end_date': award.end_date.isoformat() if award.end_date else None,
-                    'description': award.description
-                } for award in awards],
-                'certificates': [{
-                    'id': cert.id,
-                    'title': cert.title,
-                    'organization': cert.organization,
-                    'issue_date': cert.issue_date.isoformat() if cert.issue_date else None,
-                    'credential_id': cert.credential_id
-                } for cert in certificates]
-            }
+            try:
+                # 관련 데이터 조회
+                work_experiences = WorkExperience.query.filter_by(user_id=current_user_id).all()
+                projects = Project.query.filter_by(user_id=current_user_id).all()
+                education = Education.query.filter_by(user_id=current_user_id).all()
+                awards = Award.query.filter_by(user_id=current_user_id).all()
+                certificates = Certificate.query.filter_by(user_id=current_user_id).all()
+                
+                print(f"조회된 데이터 수: work_experiences={len(work_experiences)}, projects={len(projects)}, education={len(education)}, awards={len(awards)}, certificates={len(certificates)}")  # 디버깅용 로그
+                
+                response_data = {
+                    'user': {
+                        'id': user.id,
+                        'email': user.email,
+                        'name': user.name,
+                        'introduction': user.introduction,
+                        'phone': user.phone,
+                        'portfolio': user.portfolio,
+                        'blog': user.blog,
+                        'github': user.github,
+                        'user_type': user.user_type  # user_type 추가
+                    },
+                    'work_experiences': [{
+                        'id': exp.id,
+                        'company': exp.company,
+                        'department': exp.department,
+                        'position': exp.position,
+                        'is_current': exp.is_current,
+                        'start_date': exp.start_date.isoformat() if exp.start_date else None,
+                        'end_date': exp.end_date.isoformat() if exp.end_date else None,
+                        'description': exp.description
+                    } for exp in work_experiences],
+                    'projects': [{
+                        'id': proj.id,
+                        'title': proj.title,
+                        'description': proj.description,
+                        'organization': proj.organization,
+                        'portfolio_url': proj.portfolio_url,
+                        'image_url': proj.image_url,
+                        'is_representative': proj.is_representative,
+                        'start_date': proj.start_date.isoformat() if proj.start_date else None,
+                        'end_date': proj.end_date.isoformat() if proj.end_date else None,
+                        'tech_stack': proj.tech_stack
+                    } for proj in projects],
+                    'education': [{
+                        'id': edu.id,
+                        'school': edu.school,
+                        'major': edu.major,
+                        'degree': edu.degree,
+                        'start_date': edu.start_date.isoformat() if edu.start_date else None,
+                        'end_date': edu.end_date.isoformat() if edu.end_date else None
+                    } for edu in education],
+                    'awards': [{
+                        'id': award.id,
+                        'title': award.title,
+                        'start_date': award.start_date.isoformat() if award.start_date else None,
+                        'end_date': award.end_date.isoformat() if award.end_date else None,
+                        'description': award.description
+                    } for award in awards],
+                    'certificates': [{
+                        'id': cert.id,
+                        'title': cert.title,
+                        'organization': cert.organization,
+                        'issue_date': cert.issue_date.isoformat() if cert.issue_date else None,
+                        'credential_id': cert.credential_id
+                    } for cert in certificates]
+                }
+                return response_data, 200
+            except Exception as e:
+                logger.error(f"Error in get_profile: {str(e)}")
+                return {'error': str(e)}, 500
         except Exception as e:
             logger.error(f"Error in get_profile: {str(e)}")
             return {'error': str(e)}, 500
