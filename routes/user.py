@@ -442,7 +442,7 @@ class Resume(Resource):
                     try:
                         proj = Project(
                             user_id=current_user_id,
-                            name=proj_data['title'],
+                            title=proj_data['title'],
                             organization=proj_data.get('organization'),
                             description=proj_data.get('description'),
                             portfolio_url=proj_data.get('portfolio_url'),
@@ -453,7 +453,7 @@ class Resume(Resource):
                             tech_stack=proj_data.get('techStack', [])
                         )
                         db.session.add(proj)
-                        print(f"[DEBUG] 프로젝트 추가: {proj.name}")
+                        print(f"[DEBUG] 프로젝트 추가: {proj.title}")
                     except Exception as e:
                         print(f"[DEBUG] 프로젝트 데이터 처리 중 오류: {str(e)}")
                         raise
