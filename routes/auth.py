@@ -176,13 +176,11 @@ class Login(Resource):
             access_token = create_access_token(identity=user.id)
             print("토큰 생성 완료:", access_token[:10] + "...")  # 디버깅용 로그 (토큰 일부만 출력)
             
-            response = jsonify({
+            return {
                 'access_token': access_token,
                 'user_type': user.user_type,
                 'message': 'Login successful'
-            })
-            response.headers['Authorization'] = f'Bearer {access_token}'
-            return response, 200
+            }, 200, {'Authorization': f'Bearer {access_token}'}
             
         except Exception as e:
             print("로그인 처리 중 에러:", str(e))  # 디버깅용 로그
