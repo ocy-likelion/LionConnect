@@ -499,13 +499,13 @@ class Resume(Resource):
                     try:
                         cert = Certificate(
                             user_id=current_user_id,
-                            name=cert_data['title'],
+                            title=cert_data['title'],
                             organization=cert_data.get('organization'),
                             issue_date=datetime.strptime(cert_data['issueDate'], '%Y-%m-%d').date() if cert_data.get('issueDate') else None,
                             credential_id=cert_data.get('credential_id')
                         )
                         db.session.add(cert)
-                        print(f"[DEBUG] 자격증 추가: {cert.name}")
+                        print(f"[DEBUG] 자격증 추가: {cert.title}")
                     except Exception as e:
                         print(f"[DEBUG] 자격증 데이터 처리 중 오류: {str(e)}")
                         raise
