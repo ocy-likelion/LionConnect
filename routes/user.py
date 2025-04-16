@@ -123,7 +123,6 @@ def save_base64_image(base64_string, user_id):
 
 @user_ns.route('/profile')
 class Profile(Resource):
-    @jwt_required()
     @user_ns.doc('프로필 조회',
              description='사용자의 프로필 정보를 조회합니다.',
              responses={
@@ -132,6 +131,7 @@ class Profile(Resource):
                  404: '사용자를 찾을 수 없음',
                  500: '서버 오류'
              })
+    @jwt_required()
     def get(self):
         """사용자의 프로필 정보를 조회합니다."""
         try:
@@ -146,7 +146,7 @@ class Profile(Resource):
             if not user:
                 print("사용자를 찾을 수 없음")  # 디버깅용 로그
                 return {'message': 'User not found'}, 404
-            
+                
             try:
                 # 관련 데이터 조회
                 work_experiences = WorkExperience.query.filter_by(user_id=current_user_id).all()
@@ -154,9 +154,11 @@ class Profile(Resource):
                 education = Education.query.filter_by(user_id=current_user_id).all()
                 awards = Award.query.filter_by(user_id=current_user_id).all()
                 certificates = Certificate.query.filter_by(user_id=current_user_id).all()
+                skills = Skill.query.filter_by(user_id=current_user_id).all()
                 
-                print(f"조회된 데이터 수: work_experiences={len(work_experiences)}, projects={len(projects)}, education={len(education)}, awards={len(awards)}, certificates={len(certificates)}")  # 디버깅용 로그
+                print(f"조회된 데이터 수: work_experiences={len(work_experiences)}, projects={len(projects)}, education={len(education)}, awards={len(awards)}, certificates={len(certificates)}, skills={len(skills)}")  # 디버깅용 로그
                 
+                # 응답 데이터 구성
                 response_data = {
                     'user': {
                         'id': user.id,
@@ -212,12 +214,20 @@ class Profile(Resource):
                         'organization': cert.organization,
                         'issue_date': cert.issue_date.isoformat() if cert.issue_date else None,
                         'credential_id': cert.credential_id
-                    } for cert in certificates]
+                    } for cert in certificates],
+                    'skills': [{
+                        'id': skill.id,
+                        'name': skill.name,
+                        'level': skill.level
+                    } for skill in skills]
                 }
+                
                 return response_data, 200
+                
             except Exception as e:
                 logger.error(f"Error in get_profile: {str(e)}")
                 return {'error': str(e)}, 500
+                
         except Exception as e:
             logger.error(f"Error in get_profile: {str(e)}")
             return {'error': str(e)}, 500
