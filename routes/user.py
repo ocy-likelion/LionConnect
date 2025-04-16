@@ -397,9 +397,8 @@ class Resume(Resource):
             print(f"[DEBUG] 받은 요청 데이터: {data}")
             
             try:
-                # 기본 정보 업데이트
+                # 기본 정보 업데이트 (이메일 제외)
                 user.name = data.get('name', user.name)
-                user.email = data.get('email', user.email)  # 이메일 업데이트 허용
                 user.phone = data.get('phone', user.phone)
                 user.introduction = data.get('introduction', user.introduction)
                 user.portfolio = data.get('portfolio', user.portfolio)
